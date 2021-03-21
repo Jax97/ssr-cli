@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+
+const figlet = require('figlet');
+const versionStr = figlet.textSync('Jax');
+const Printer = require('@darkobits/lolcatjs');
+const shell = require('shelljs');
+const { Command } = require('commander');
+const program = new Command();
+const _version = require('../package.json').version;
+
+program.version(
+  Printer.default.fromString(`SSR脚手架${_version}\n${versionStr}`)
+);
+
+program.parse(process.argv);
+
+// console.log(Printer.default.fromString('SSR脚手架' + '\n' + versionStr));
