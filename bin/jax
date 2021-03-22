@@ -7,11 +7,88 @@ const shell = require('shelljs');
 const { Command } = require('commander');
 const program = new Command();
 const _version = require('../package.json').version;
+const chalk = require('chalk');
+const inquirer = require('inquirer');
+const ora = require('ora');
+const download = require('download-git-repo');
 
 program.version(
   Printer.default.fromString(`SSR脚手架${_version}\n${versionStr}`)
 );
 
-program.parse(process.argv);
+program.option('-i init', 'init your application');
+program.option('-c create', 'create your application');
 
-// console.log(Printer.default.fromString('SSR脚手架' + '\n' + versionStr));
+const bindHandler = {
+  create(otherParams) {
+    inquirer
+      .prompt([
+        {
+          type: 'text',
+          message: '1. please input your application name',
+          name: 'dirname',
+        },
+        {
+          type: 'list',
+          name: 'jskind',
+          message: '2. please choose the language',
+          choices: ['☞ JavaScript && HTML', '☞ React && React Hooks'],
+        },
+      ])
+      .then((answers) => {
+        const _pwd = shell.pwd().stdout;
+        const projectPath = `${_pwd}/${answers.dirname}`;
+
+        shell.rm('-rf', projectPath);
+        shell.mkdir(projectPath);
+
+        const spinner = ora('⏰ downloading template ... ...');
+        spinner.start();
+        let template, applicationName;
+        const nameMap = {
+          JavaScript: 'hjx-ssr-cli',
+          React: 'react-hooks-ssr-cli',
+        };
+        if (answers.jskind.includes('JavaScript && HTML')) {
+          template = 'direct:https://github.com/Jax97/ssr-ts-html-cli.git';
+          applicationName = nameMap['JavaScript'];
+        } else if (answers.jskind.includes('React && React Hooks')) {
+          template = 'direct:https://github.com/Jax97/react-hooks-ssr-cli.git';
+          applicationName = nameMap['React'];
+        }
+
+        download(template, projectPath, { clone: true }, function (err) {
+          spinner.stop();
+          if (err) {
+            console.log(err);
+          } else {
+            console.log('create successfully');
+            shell.sed(
+              '-i',
+              applicationName,
+              answers.dirname,
+              projectPath + '/package.json'
+            );
+          }
+        });
+      });
+  },
+  init(otherParams) {
+    console.log('初始化项目');
+  },
+};
+
+// 获取用户指令
+program
+  .usage('[cmd] <options>')
+  .arguments('<cmd> [env]')
+  .action(function (cmd, otherParams) {
+    const handler = bindHandler[cmd];
+    if (typeof handler === 'undefined') {
+      console.log(chalk.red(cmd) + " isn't supported");
+    } else {
+      handler(otherParams);
+    }
+  });
+
+program.parse(process.argv);
